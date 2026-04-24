@@ -68,6 +68,49 @@ This wires:
 Python package with `pip install -e .` from the project root, or add
 `<project>/.venv/bin` to your PATH.
 
+## Working with git
+
+Claude-team replicates filesystem changes across all cluster members in
+real time. Git manages history via branch-based isolation. These two
+models are fundamentally in tension. Do not try to get around the rule
+below — you will lose work.
+
+**Rule: all cluster members must be on the same branch.**
+
+What goes wrong if you break the rule: Alice on `branch-steve` edits
+`foo.py`. Claude-team replicates the edit onto Bob's disk, where Bob
+is on `branch-bob`. Bob's next commit on `branch-bob` now contains
+Alice's change. Same thing happens in reverse. When `branch-steve` and
+`branch-bob` eventually merge, git sees two commits with overlapping
+edits and either produces conflicts or — worse — silently accepts both
+versions of the same change. You cannot undo this without rolling back
+commits.
+
+**Recommended workflow:**
+
+1. Pick a feature branch. Every cluster member checks it out.
+2. Start or join the cluster. Edit collaboratively.
+3. When the feature is ready and everyone has stopped editing, one
+   designated person:
+   - runs `checkpoint` via the MCP tool or CLI (captures shared state,
+     rotates the overlay, writes new checkpoint files)
+   - commits (including the updated `.claude-team/` files)
+   - pushes and opens the PR
+4. Everyone else pulls before making further changes.
+5. When the PR merges, every cluster member:
+   - stops Claude Code (tears down their claude-team session)
+   - `git checkout main && git pull && git checkout -b next-feature`
+   - restarts Claude Code (rejoins or founds a fresh cluster)
+
+**Branch switches are cluster-leaving events.** You cannot switch
+branches while claude-team is running — the local filesystem won't
+match the cluster checkpoint anymore and incoming events will fail
+their pre-hash check. Stop the MCP server, switch branch, restart.
+
+**Who merges:** only one person. A merge moves main forward; everyone
+else must pull before their next edit. Coordinate: "I'm merging,
+everyone pause and pull in 30s."
+
 ## Distributing checkpoints
 
 Claude-team writes `.claude-team/checkpoint.json` and `.claude-team/manifest.json`

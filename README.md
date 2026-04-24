@@ -141,8 +141,59 @@ pull, rsync, whatever. Claude-team is unaware of the transport.
 checkpoint, bumps the number, writes both files, and rotates the
 overlay event stream so future events start from the new baseline.
 
+## Working with git
+
+Claude-team is **not a git workflow tool**. It does real-time
+filesystem replication: whatever Alice edits ends up on Bob's disk,
+and vice versa. This is fundamentally incompatible with branch-based
+isolation. Read that again.
+
+**The rules:**
+
+1. **All cluster members must be on the same branch.** If Alice is on
+   `branch-steve` and Bob is on `branch-bob` while in the same cluster,
+   Alice's changes will be replicated into Bob's working tree and
+   committed to `branch-bob`, and Bob's will end up on `branch-steve`.
+   When these branches eventually merge, you have overlapping,
+   interleaved commits and a mess.
+2. **Treat a cluster like a shared live editing session.** Think Google
+   Docs, not git-flow. Everyone sees everyone's changes in real time.
+   The cluster is a way to collaborate *within* a branch, not across
+   branches.
+3. **Git operations should be done with the cluster quiescent.** When
+   someone is committing / pushing / pulling / switching branches, no
+   one else should be editing. Coordinate verbally: "I'm going to
+   commit, hold off for 30 seconds."
+4. **Only one person merges to main.** Same reason — a merge is an
+   externally-visible event and the next action (pulling main back
+   into the feature branch on every peer) needs to be coordinated.
+5. **Branch switches require leaving the cluster.** To switch branches:
+   stop Claude Code (tears down your claude-team session), switch
+   branch, restart. On restart your local state won't match the
+   cluster — start a new cluster (`--new-cluster`) or rejoin the
+   correct one.
+
+**Recommended workflow:**
+
+- Pick a feature branch. Everyone checks out that branch.
+- Start claude-team cluster. Live-collaborate until the feature is
+  ready.
+- Cluster quiescent → one designated person commits the shared state
+  and runs `checkpoint` (which writes the new checkpoint files).
+- That same person pushes and opens a PR.
+- When the PR merges, everyone leaves the cluster, pulls main,
+  re-checks out the next feature branch, and starts a new cluster.
+
+This is a deliberate design choice: we keep claude-team focused on the
+"many developers, same branch, same moment" case (the case git does
+poorly) and leave the "many branches, deliberate isolation" case to git
+(which does it well).
+
 ## Limitations
 
+- **All cluster members must be on the same git branch.** Claude-team
+  replicates filesystem changes, which is incompatible with branch
+  isolation. See the "Working with git" section above.
 - **Bash-driven edits don't have mutual exclusion.** Only replication.
   If two peers `sed -i` the same file at the same time, last writer
   wins. Coordinated edits must go through Claude's Edit/Write tools.
