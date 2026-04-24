@@ -1,0 +1,11 @@
+{
+  "name": "claude-team",
+  "version": "0.1.0",
+  "description": "Coordination layer for multiple Claude Code instances editing the same project: discovery, distributed locks, and edit propagation over NATS JetStream.",
+  "author": {
+    "name": "Steve Shoecraft",
+    "email": "spshoecraft@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": ["collaboration", "coordination", "dlm", "mcp", "nats"]
+}

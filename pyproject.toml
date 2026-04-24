@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-team"
+version = "0.1.0"
+description = "MCP coordination layer for multiple Claude Code instances working on the same codebase"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Steve Shoecraft", email = "spshoecraft@gmail.com"}]
+dependencies = [
+    "nats-py>=2.6.0",
+    "mcp>=1.0.0",
+    "watchfiles>=0.21",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+claude-team = "claude_team.cli:main"
+claude-team-mcp = "claude_team.mcp_server:main"
+
+[tool.setuptools.packages.find]
+include = ["claude_team*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
